@@ -4,6 +4,12 @@
   <artifactId>PROF2022-control1</artifactId>
   <version>0.0.1-SNAPSHOT</version>
   
+  <properties>
+	  <maven.compiler.source>17</maven.compiler.source>
+	  <maven.compiler.target>17</maven.compiler.target>
+  </properties>
+
+  
   <dependencies>
     <!-- JUnit Jupiter (JUnit 5) -->
     <dependency>

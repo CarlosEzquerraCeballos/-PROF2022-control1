@@ -1,0 +1,40 @@
+ale, entonces tu proyecto está apuntando a un JRE cutre, no a un JDK. Por eso peta con las lambdas. Haz esto en Eclipse, versión Windows de “clic donde duele”:
+
+1) Comprueba que tienes un JDK instalado
+
+Si no tienes: instala Temurin/OpenJDK 17. Rollo: C:\Program Files\Eclipse Adoptium\jdk-17\ o C:\Program Files\Java\jdk-17\.
+
+2) Díselo a Eclipse
+
+Window → Preferences → Java → Installed JREs
+
+Pulsa Add… → Standard VM.
+
+JRE home: selecciona la carpeta del JDK (no jre, no bin, la raíz del JDK).
+
+Dale un Name decente, tipo JDK-17.
+
+Marca la casilla para que sea el Default.
+
+Preferences → Java → Installed JREs → Execution Environments
+
+Selecciona JavaSE-17 (o 1.8 si vas a lo mínimo)
+
+En la lista de abajo, marca el JDK-17 que acabas de añadir.
+
+4) Alinea Maven para que no se haga el digno
+
+En el pom.xml mete esto (elige 17 o 1.8, pero sé coherente con lo de arriba):
+
+<properties>
+  <maven.compiler.source>17</maven.compiler.source>
+  <maven.compiler.target>17</maven.compiler.target>
+</properties>
+
+
+Si usas 1.8:
+
+<properties>
+  <maven.compiler.source>1.8</maven.compiler.source>
+  <maven.compiler.target>1.8</maven.compiler.target>
+</properties>
