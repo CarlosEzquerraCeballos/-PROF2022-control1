@@ -1,0 +1,267 @@
+package es.grise.upm.profundizacion.subscriptionService;
+
+public enum Delivery {
+	LOCAL, DO_NOT_DELIVER
+}
+
+
+
+
+
+
+package es.grise.upm.profundizacion.subscriptionService;
+
+import java.util.ArrayList;
+import java.util.Collection;
+
+import es.grise.upm.profundizacion.exceptions.ExistingUserException;
+import es.grise.upm.profundizacion.exceptions.NullUserException;
+import es.grise.upm.profundizacion.exceptions.LocalUserDoesNotHaveNullEmailException;
+
+public class SubscriptionService {
+
+	private Collection<User> subscribers;
+
+	public SubscriptionService(Delivery delivery) {
+		this.subscribers = new ArrayList<User>();
+	}
+
+	public void addSubscriber(User user)
+			throws NullUserException, ExistingUserException, LocalUserDoesNotHaveNullEmailException {
+
+		if (user == null)
+			throw new NullUserException();
+
+		if (subscribers.contains(user))
+			throw new ExistingUserException();
+
+		if (user.getDelivery() == Delivery.LOCAL)
+			if (user.getEmail() != null)
+				throw new LocalUserDoesNotHaveNullEmailException();
+
+		subscribers.add(user);
+	}
+
+	public Collection<User> getSubscribers() {
+		return subscribers;
+	}
+}
+
+
+
+
+
+
+package es.grise.upm.profundizacion.subscriptionService;
+
+public class User {
+	Delivery delivery = null;
+
+	public String getEmail() { return null; }
+	public Delivery getDelivery() { return null; }
+}
+
+
+
+
+
+
+
+
+package es.grise.upm.profundizacion.exceptions;
+
+public class ExistingUserException extends Exception {
+	private static final long serialVersionUID = 1L;
+}
+
+
+
+
+
+
+package es.grise.upm.profundizacion.exceptions;
+
+public class LocalUserDoesNotHaveNullEmailException extends Exception { }
+
+
+
+
+
+
+
+package es.grise.upm.profundizacion.exceptions;
+
+public class NullUserException extends Exception { }
+
+
+
+
+
+
+
+
+------OPCION A: SIN MOCKS-------
+package es.grise.upm.profundizacion.subscriptionService;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+import java.util.Collection;
+
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
+import es.grise.upm.profundizacion.exceptions.ExistingUserException;
+import es.grise.upm.profundizacion.exceptions.LocalUserDoesNotHaveNullEmailException;
+import es.grise.upm.profundizacion.exceptions.NullUserException;
+
+class SubscriptionServiceTest_WithoutMocks {
+
+	@Test
+	@DisplayName("addSubscriber(null) lanza NullUserException")
+	void add_nullUser_throws() {
+		SubscriptionService service = new SubscriptionService(Delivery.DO_NOT_DELIVER);
+		assertThrows(NullUserException.class, () -> service.addSubscriber(null));
+	}
+
+	@Test
+	@DisplayName("Añadir mismo objeto dos veces lanza ExistingUserException")
+	void add_duplicate_throws() throws Exception {
+		SubscriptionService service = new SubscriptionService(Delivery.DO_NOT_DELIVER);
+
+		User u = new User() {
+			@Override public Delivery getDelivery() { return Delivery.DO_NOT_DELIVER; }
+			@Override public String getEmail() { return "x@y.z"; }
+		};
+
+		service.addSubscriber(u);
+		assertThrows(ExistingUserException.class, () -> service.addSubscriber(u));
+	}
+
+	@Test
+	@DisplayName("Usuario LOCAL con email no nulo lanza LocalUserDoesNotHaveNullEmailException")
+	void local_withEmail_throws() {
+		SubscriptionService service = new SubscriptionService(Delivery.LOCAL);
+
+		User localWithEmail = new User() {
+			@Override public Delivery getDelivery() { return Delivery.LOCAL; }
+			@Override public String getEmail() { return "local@foo.bar"; }
+		};
+
+		assertThrows(LocalUserDoesNotHaveNullEmailException.class, () -> service.addSubscriber(localWithEmail));
+	}
+
+	@Test
+	@DisplayName("Usuario LOCAL con email null se añade correctamente")
+	void local_withNullEmail_ok() throws Exception {
+		SubscriptionService service = new SubscriptionService(Delivery.LOCAL);
+
+		User localNullEmail = new User() {
+			@Override public Delivery getDelivery() { return Delivery.LOCAL; }
+			@Override public String getEmail() { return null; }
+		};
+
+		service.addSubscriber(localNullEmail);
+		Collection<User> subs = service.getSubscribers();
+		assertTrue(subs.contains(localNullEmail));
+		assertEquals(1, subs.size());
+	}
+
+	@Test
+	@DisplayName("Usuario DO_NOT_DELIVER con email cualquiera se añade correctamente")
+	void doNotDeliver_anyEmail_ok() throws Exception {
+		SubscriptionService service = new SubscriptionService(Delivery.DO_NOT_DELIVER);
+
+		User remoteWithEmail = new User() {
+			@Override public Delivery getDelivery() { return Delivery.DO_NOT_DELIVER; }
+			@Override public String getEmail() { return "remote@site.com"; }
+		};
+
+		service.addSubscriber(remoteWithEmail);
+		assertTrue(service.getSubscribers().contains(remoteWithEmail));
+	}
+}
+
+
+
+
+
+
+
+------OPCION B: CON MOCKS-------
+package es.grise.upm.profundizacion.subscriptionService;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
+import es.grise.upm.profundizacion.exceptions.ExistingUserException;
+import es.grise.upm.profundizacion.exceptions.LocalUserDoesNotHaveNullEmailException;
+import es.grise.upm.profundizacion.exceptions.NullUserException;
+
+class SubscriptionServiceTest_WithMocks {
+
+	@Test
+	@DisplayName("NullUserException con null")
+	void add_null_throws() {
+		SubscriptionService service = new SubscriptionService(Delivery.DO_NOT_DELIVER);
+		assertThrows(NullUserException.class, () -> service.addSubscriber(null));
+	}
+
+	@Test
+	@DisplayName("ExistingUserException al duplicar el mismo User")
+	void add_duplicate_throws() throws Exception {
+		SubscriptionService service = new SubscriptionService(Delivery.LOCAL);
+
+		User mockUser = mock(User.class);
+		when(mockUser.getDelivery()).thenReturn(Delivery.DO_NOT_DELIVER);
+		when(mockUser.getEmail()).thenReturn("a@b.c");
+
+		service.addSubscriber(mockUser);
+		assertThrows(ExistingUserException.class, () -> service.addSubscriber(mockUser));
+	}
+
+	@Test
+	@DisplayName("LOCAL + email no nulo => LocalUserDoesNotHaveNullEmailException")
+	void local_with_email_not_null_throws() {
+		SubscriptionService service = new SubscriptionService(Delivery.LOCAL);
+
+		User local = mock(User.class);
+		when(local.getDelivery()).thenReturn(Delivery.LOCAL);
+		when(local.getEmail()).thenReturn("no-deberia@tener.email");
+
+		assertThrows(LocalUserDoesNotHaveNullEmailException.class, () -> service.addSubscriber(local));
+	}
+
+	@Test
+	@DisplayName("LOCAL + email null => OK")
+	void local_with_email_null_ok() throws Exception {
+		SubscriptionService service = new SubscriptionService(Delivery.LOCAL);
+
+		User local = mock(User.class);
+		when(local.getDelivery()).thenReturn(Delivery.LOCAL);
+		when(local.getEmail()).thenReturn(null);
+
+		service.addSubscriber(local);
+		assertTrue(service.getSubscribers().contains(local));
+	}
+
+	@Test
+	@DisplayName("DO_NOT_DELIVER con email cualquiera => OK")
+	void remote_any_email_ok() throws Exception {
+		SubscriptionService service = new SubscriptionService(Delivery.DO_NOT_DELIVER);
+
+		User remote = mock(User.class);
+		when(remote.getDelivery()).thenReturn(Delivery.DO_NOT_DELIVER);
+		when(remote.getEmail()).thenReturn("ok@ok.com");
+
+		service.addSubscriber(remote);
+		assertTrue(service.getSubscribers().contains(remote));
+	}
+}
+
+
+
+
+

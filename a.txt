@@ -1,0 +1,213 @@
+package es.upm.grise.profundizacion.cruiseControl;
+
+public interface Speedometer {
+    int getCurrentSpeed();
+}
+
+
+
+
+
+
+
+package es.upm.grise.profundizacion.cruiseControl;
+
+import es.upm.grise.profundizacion.exceptions.IncorrectSpeedSetException;
+import es.upm.grise.profundizacion.exceptions.SpeedSetAboveSpeedLimitException;
+
+public class CruiseControl {
+
+    @SuppressWarnings("unused")
+    private Speedometer speedometer;
+    private Integer speedSet;
+    private Integer speedLimit;
+
+    public CruiseControl(Speedometer speedometer) {
+        this.speedometer = speedometer;
+        this.speedSet = null;
+        this.speedLimit = null;
+    }
+
+    public void setSpeedSet(int speedSet)
+            throws SpeedSetAboveSpeedLimitException, IncorrectSpeedSetException {
+
+        if (speedSet <= 0)
+            throw new IncorrectSpeedSetException();
+
+        if (speedLimit != null) {
+            if (speedSet > speedLimit)
+                throw new SpeedSetAboveSpeedLimitException();
+        }
+
+        this.speedSet = speedSet;
+    }
+
+    public Integer getSpeedLimit() {
+        return speedLimit;
+    }
+
+    public void setSpeedLimit(Integer speedLimit) {
+        this.speedLimit = speedLimit;
+    }
+
+    public Integer getSpeedSet() {
+        return speedSet;
+    }
+}
+
+
+
+
+
+package es.upm.grise.profundizacion.exceptions;
+
+public class IncorrectSpeedSetException extends Exception {
+    private static final long serialVersionUID = 1L;
+}
+
+
+
+
+package es.upm.grise.profundizacion.exceptions;
+
+public class SpeedSetAboveSpeedLimitException extends Exception {
+    private static final long serialVersionUID = 1L;
+    public SpeedSetAboveSpeedLimitException() {}
+}
+
+
+
+-------OPCIÓN A: SIN MOCKS-------
+
+
+package es.upm.grise.profundizacion.cruiseControl;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+
+import es.upm.grise.profundizacion.exceptions.IncorrectSpeedSetException;
+import es.upm.grise.profundizacion.exceptions.SpeedSetAboveSpeedLimitException;
+
+class CruiseControlTest_WithoutMocks {
+
+    // Stub mínimo; la lógica de CruiseControl no lo usa.
+    static class StubSpeedometer implements Speedometer {
+        private final int speed;
+        StubSpeedometer(int speed) { this.speed = speed; }
+        @Override public int getCurrentSpeed() { return speed; }
+    }
+
+    @Test
+    @DisplayName("Lanza IncorrectSpeedSetException si speedSet <= 0")
+    void setSpeedSet_nonPositive_throwsIncorrect() {
+        CruiseControl cc = new CruiseControl(new StubSpeedometer(50));
+        assertAll(
+            () -> assertThrows(IncorrectSpeedSetException.class, () -> cc.setSpeedSet(0)),
+            () -> assertThrows(IncorrectSpeedSetException.class, () -> cc.setSpeedSet(-10))
+        );
+    }
+
+    @Test
+    @DisplayName("Con límite establecido, si speedSet > límite lanza SpeedSetAboveSpeedLimitException")
+    void setSpeedSet_aboveLimit_throws() {
+        CruiseControl cc = new CruiseControl(new StubSpeedometer(50));
+        cc.setSpeedLimit(90);
+        assertThrows(SpeedSetAboveSpeedLimitException.class, () -> cc.setSpeedSet(100));
+    }
+
+    @Test
+    @DisplayName("Con límite establecido, speedSet == límite es válido y se asigna")
+    void setSpeedSet_equalToLimit_ok() throws Exception {
+        CruiseControl cc = new CruiseControl(new StubSpeedometer(50));
+        cc.setSpeedLimit(90);
+        cc.setSpeedSet(90);
+        assertEquals(90, cc.getSpeedSet());
+    }
+
+    @Test
+    @DisplayName("Con límite establecido, speedSet < límite es válido y se asigna")
+    void setSpeedSet_belowLimit_ok() throws Exception {
+        CruiseControl cc = new CruiseControl(new StubSpeedometer(50));
+        cc.setSpeedLimit(90);
+        cc.setSpeedSet(80);
+        assertEquals(80, cc.getSpeedSet());
+    }
+
+    @Test
+    @DisplayName("Sin límite (null), se permite cualquier speedSet > 0")
+    void setSpeedSet_noLimit_allowsAnyPositive() throws Exception {
+        CruiseControl cc = new CruiseControl(new StubSpeedometer(50));
+        assertNull(cc.getSpeedLimit());
+        cc.setSpeedSet(200);
+        assertEquals(200, cc.getSpeedSet());
+    }
+}
+
+
+
+
+
+
+-------OPCION B: CON MOCKS------
+package es.upm.grise.profundizacion.cruiseControl;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
+import es.upm.grise.profundizacion.exceptions.IncorrectSpeedSetException;
+import es.upm.grise.profundizacion.exceptions.SpeedSetAboveSpeedLimitException;
+
+class CruiseControlTest_WithMocks {
+
+    @Test
+    @DisplayName("Speedometer mock inyectado; validaciones de setSpeedSet funcionan igual")
+    void withMock_behavesSame() throws Exception {
+        Speedometer speedometer = mock(Speedometer.class);
+        when(speedometer.getCurrentSpeed()).thenReturn(42); // ni se usa, pero queda mono
+
+        CruiseControl cc = new CruiseControl(speedometer);
+
+        // Caso incorrecto
+        assertThrows(IncorrectSpeedSetException.class, () -> cc.setSpeedSet(0));
+
+        // Con límite, mayor que el límite
+        cc.setSpeedLimit(70);
+        assertThrows(SpeedSetAboveSpeedLimitException.class, () -> cc.setSpeedSet(71));
+
+        // Igual al límite
+        cc.setSpeedSet(70);
+        assertEquals(70, cc.getSpeedSet());
+
+        // Por debajo del límite
+        cc.setSpeedSet(60);
+        assertEquals(60, cc.getSpeedSet());
+    }
+}
+
+
+
+
+
+------SI HAY QUE CUBRIR SETERS Y GETERS------
+package es.upm.grise.profundizacion.cruiseControl;
+
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
+
+class CruiseControlGettersSettersTest {
+
+    @Test
+    void speedLimit_getterSetter_roundtrip() {
+        CruiseControl cc = new CruiseControl(() -> 0);
+        assertNull(cc.getSpeedLimit());
+        cc.setSpeedLimit(123);
+        assertEquals(123, cc.getSpeedLimit());
+    }
+}
+
